@@ -21,7 +21,7 @@ func (s *Shell) runBuiltin(args []string) bool {
 	case "ls":
 		entries, _ := os.ReadDir(".")
 		for _, ent := range entries {
-			fmt.Printf("%s\t", ent.Name())
+			fmt.Println(ent.Name())
 		}
 		return true
 
