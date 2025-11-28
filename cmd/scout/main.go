@@ -3,5 +3,7 @@ package main
 import "github.com/DeleMike/scout/internal/shell"
 
 func main() {
-	shell.Start()
+	// create new shell and start
+	s := shell.New()
+	s.Start()
 }

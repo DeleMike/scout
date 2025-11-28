@@ -1,3 +1,4 @@
+// shell package
 package shell
 
 import (
@@ -7,36 +8,36 @@ import (
 	"strings"
 )
 
-func Start() {
+// Shell class design
+type Shell struct {
+	prompt string
+}
+
+// New initializes a Shell application.
+func New() *Shell {
+	return &Shell{
+		prompt: "scout> ",
+	}
+}
+
+// Start opens and starts shell to receive commands(inputs) and process them to deliver output.
+// Shell basically follow a REPL event loop.
+func (shell *Shell) Start() {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Print("scout> ")
+		fmt.Print(shell.prompt)
+
 		line, _ := reader.ReadString('\n')
 		line = strings.TrimSpace(line)
+		args := strings.Split(line, " ")
 
-		if line == "" {
+		if len(args) == 0 || line == "" {
 			continue
 		}
 
-		args := strings.Fields(line)
+		// check for builtin command
 
-		// implement shell functions
-		switch args[0] {
-		case "exit":
-			fmt.Println("Byeee!")
-			return
-		case "cd":
-			if len(args) < 2 {
-				fmt.Println("usage: cd <path>")
-				continue
-			}
-			if err := os.Chdir(args[1]); err != nil {
-				fmt.Println("error:", err)
-			}
-
-		default:
-			fmt.Println("unknown command:", args[0])
-		}
+		// check for external commands(e.g git, go, curl, etc)
 
 	}
 }
