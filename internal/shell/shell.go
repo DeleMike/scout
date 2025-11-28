@@ -36,8 +36,12 @@ func (shell *Shell) Start() {
 		}
 
 		// check for builtin command
+		if handled := shell.runBuiltin(args); handled {
+			continue
+		}
 
 		// check for external commands(e.g git, go, curl, etc)
+		shell.runExternal(args)
 
 	}
 }
