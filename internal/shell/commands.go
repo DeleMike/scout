@@ -3,6 +3,8 @@ package shell
 import (
 	"fmt"
 	"os"
+
+	"github.com/DeleMike/scout/internal/scanner"
 )
 
 // runBuiltin runs simple commands that every shell application should have.
@@ -23,6 +25,17 @@ func (s *Shell) runBuiltin(args []string) bool {
 		for _, ent := range entries {
 			fmt.Println(ent.Name())
 		}
+		return true
+	case "scout":
+		wd, _ := os.Getwd()
+		scannedDir, err := scanner.ScanDirectory(wd)
+		if err != nil {
+			fmt.Println("Something happened")
+			return true
+		}
+
+		fmt.Printf("%v\n", scannedDir.Pretty())
+
 		return true
 
 	}
