@@ -1,10 +1,11 @@
 package shell
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
-	"github.com/DeleMike/scout/internal/scanner"
+	"github.com/DeleMike/scout/internal/scout"
 )
 
 // runBuiltin runs simple commands that every shell application should have.
@@ -28,14 +29,18 @@ func (s *Shell) runBuiltin(args []string) bool {
 		return true
 	case "scout":
 		wd, _ := os.Getwd()
-		scannedDir, err := scanner.ScanDirectory(wd)
+		summary, err := scout.Run(wd)
 		if err != nil {
-			fmt.Println("Something happened")
+			fmt.Println("Error:", err)
 			return true
 		}
 
-		fmt.Printf("%v\n", scannedDir.Pretty())
-
+		b, err := json.MarshalIndent(summary, "", "  ")
+		if err != nil {
+			fmt.Println("JSON marshal error:", err)
+			return true
+		}
+		fmt.Println(string(b))
 		return true
 
 	}
