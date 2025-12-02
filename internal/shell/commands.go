@@ -35,12 +35,12 @@ func (s *Shell) runBuiltin(args []string) bool {
 			return true
 		}
 
-		b, err := json.MarshalIndent(summary, "", "  ")
+		prettyJSON, err := json.MarshalIndent(summary, "", "  ")
 		if err != nil {
 			fmt.Println("JSON marshal error:", err)
 			return true
 		}
-		fmt.Println(string(b))
+		fmt.Println(string(prettyJSON))
 		return true
 
 	}

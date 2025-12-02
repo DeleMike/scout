@@ -57,6 +57,7 @@ func Run(root string) (*DirectorySummary, error) {
 			fileSummary.Metadata = map[string]any{
 				"preview": content.Preview,
 				"lines":   content.Lines,
+				"details": content.Details,
 			}
 		}
 
