@@ -19,7 +19,7 @@ func (m MarkdownExtractor) Extract(path string) (*ExtractedContent, error) {
 
 	title := ""
 	for _, l := range lines {
-		if after, ok :=strings.CutPrefix(l, "# "); ok  {
+		if after, ok := strings.CutPrefix(l, "# "); ok {
 			title = after
 			break
 		}

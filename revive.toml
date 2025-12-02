@@ -1,0 +1,14 @@
+ignoreGeneratedHeader = false
+severity = "warning"
+confidence = 0.8
+errorCode = 0
+warningCode = 0
+
+[rule.blank-imports]
+[rule.exported]
+[rule.var-naming]
+[rule.package-comments]
+[rule.error-return]
+[rule.indent-error-flow]
+[rule.if-return]
+[rule.range]

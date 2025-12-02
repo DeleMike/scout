@@ -27,7 +27,7 @@ func (s *Shell) runBuiltin(args []string) bool {
 			fmt.Println(ent.Name())
 		}
 		return true
-	case "scout":
+	case "sc":
 		wd, _ := os.Getwd()
 		summary, err := scout.Run(wd)
 		if err != nil {
