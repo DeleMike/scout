@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/DeleMike/scout/internal/scout"
+	"github.com/DeleMike/scout/internal/summarize"
 )
 
 // runBuiltin runs simple commands that every shell application should have.
@@ -28,8 +29,8 @@ func (s *Shell) runBuiltin(args []string) bool {
 		}
 		return true
 	case "sc":
-		wd, _ := os.Getwd()
-		summary, err := scout.Run(wd)
+		// wd, _ := os.Getwd()
+		summary, err := scout.Run("/Users/mac/FlutterProjects")
 		if err != nil {
 			fmt.Println("Error:", err)
 			return true
@@ -40,7 +41,16 @@ func (s *Shell) runBuiltin(args []string) bool {
 			fmt.Println("JSON marshal error:", err)
 			return true
 		}
-		fmt.Println(string(prettyJSON))
+
+		// fmt.Printf("scanning result: \n%v",string(prettyJSON))
+
+		aiResponse, err := summarize.Summarize(string(prettyJSON))
+		if err != nil {
+			fmt.Println("Summarizer error:", err)
+			return true
+		}
+
+		fmt.Println(aiResponse)
 		return true
 
 	}

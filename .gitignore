@@ -34,3 +34,5 @@ tmp/
 .vscode/
 .DS_Store
 bin
+
+llama

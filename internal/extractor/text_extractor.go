@@ -1,6 +1,7 @@
 package extractor
 
 import (
+	"slices"
 	"os"
 	"strings"
 )
@@ -16,12 +17,7 @@ func IsTextFile(ext string) bool {
 		".rb", ".rs", ".php", ".css", ".html",
 	}
 
-	for _, e := range textExt {
-		if ext == e {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(textExt, ext)
 }
 
 type GenericTextExtractor struct{}
