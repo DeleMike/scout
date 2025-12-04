@@ -22,15 +22,15 @@ type FileInfo struct {
 	Size    int64
 }
 
-type DirectorySummary struct {
+type ScanResult struct {
 	Path           string
 	Files          []FileInfo
 	Subdirectories []string
 }
 
 // ScanDirectory checks what are the contents of the current working directory
-func ScanDirectory(root string) (*DirectorySummary, error) {
-	summary := &DirectorySummary{
+func ScanDirectory(root string) (*ScanResult, error) {
+	summary := &ScanResult{
 		Path: root,
 	}
 
@@ -76,7 +76,7 @@ func ScanDirectory(root string) (*DirectorySummary, error) {
 	return summary, nil
 }
 
-func (d *DirectorySummary) Pretty() string {
+func (d *ScanResult) Pretty() string {
 	var b strings.Builder
 
 	b.WriteString(fmt.Sprintf("Directory: %s\n\n", d.Path))

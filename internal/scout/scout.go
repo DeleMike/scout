@@ -9,10 +9,11 @@ import (
 
 // FileSummary is the structured info for each file
 type FileSummary struct {
-	Name     string         `json:"name"`
-	Type     string         `json:"type"`
-	Size     int64          `json:"size_bytes"`
-	Metadata map[string]any `json:"metadata,omitempty"`
+	Name      string         `json:"name"`
+	Type      string         `json:"type"`
+	Extension string         `json:"extension"`
+	Size      int64          `json:"size_bytes"`
+	Metadata  map[string]any `json:"metadata,omitempty"`
 }
 
 // DirectorySummary is the structured summary of a directory
@@ -24,10 +25,10 @@ type DirectorySummary struct {
 }
 
 // Run scans a directory, extracts content metadata, and returns structured summary
-func Run(root string) (*DirectorySummary, error) {
+func Run(root string) (*DirectorySummary, *ContentInsight, error) {
 	dir, err := scanner.ScanDirectory(root)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	summary := &DirectorySummary{
@@ -45,9 +46,10 @@ func Run(root string) (*DirectorySummary, error) {
 		content, err := extractor.Extract(file.Path)
 
 		fileSummary := FileSummary{
-			Name: file.Name,
-			Type: "unknown",
-			Size: file.Size,
+			Name:      file.Name,
+			Type:      "unknown",
+			Extension: file.FileExt,
+			Size:      file.Size,
 		}
 
 		if err != nil {
@@ -64,6 +66,8 @@ func Run(root string) (*DirectorySummary, error) {
 		summary.Files = append(summary.Files, fileSummary)
 
 	}
-	return summary, nil
+	insight := AnalyzeDirectory(summary)
+	
+	return summary, insight, nil
 
 }
