@@ -1,8 +1,9 @@
 package extractor
 
 import (
-	"slices"
+	"io"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -15,6 +16,7 @@ func IsTextFile(ext string) bool {
 		".xml", ".csv", ".ini", ".cfg",
 		".go", ".py", ".js", ".ts", ".java", ".swift",
 		".rb", ".rs", ".php", ".css", ".html",
+		".c", ".cpp", ".h", ".hpp", ".cmake", ".sh",
 	}
 
 	return slices.Contains(textExt, ext)
@@ -22,21 +24,33 @@ func IsTextFile(ext string) bool {
 
 type GenericTextExtractor struct{}
 
-func (g GenericTextExtractor) Extract(path string) (*ExtractedContent, error) {
-	data, err := os.ReadFile(path)
+func (e GenericTextExtractor) Extract(path string) (*ExtractedContent, error) {
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 
-	raw := string(data)
-	lines := strings.Split(raw, "\n")
+	// Read ONLY the first 1000 bytes
+	buf := make([]byte, 1000)
+	n, err := file.Read(buf)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
 
-	preview := strings.Join(lines[:min(len(lines), 20)], "\n")
+	text := string(buf[:n])
+
+	lines := 0
+	for _, c := range text {
+		if c == '\n' {
+			lines++
+		}
+	}
 
 	return &ExtractedContent{
 		Category: "text",
-		Preview:  preview,
-		Lines:    len(lines),
-		Details:  map[string]any{},
+		Preview:  text,
+		Lines:    lines,
+		Details:  map[string]any{"format": "text"},
 	}, nil
 }

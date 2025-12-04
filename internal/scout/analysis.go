@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/DeleMike/scout/internal/scanner"
 	"github.com/DeleMike/scout/internal/utils"
 )
 
@@ -65,7 +64,7 @@ func AnalyzeDirectory(summary *DirectorySummary) *ContentInsight {
 	case DomainCreative:
 		extractCreativeInsights(insight)
 	default:
-		extractMixedInsights(insight)
+		extractMixedInsights(insight, summary.Files)
 	}
 
 	return insight
@@ -147,7 +146,7 @@ func detectDomain(categories map[string]int, files []FileSummary) DomainType {
 		return DomainSoftwareProject
 	}
 
-	if categories["pdf"] > 5 && docPercent > 0.5 {
+	if docPercent > 0.5 {
 		// Check if study materials
 		if hasStudyKeywords(files) {
 			return DomainStudyMaterials
@@ -413,15 +412,39 @@ func extractCreativeInsights(insight *ContentInsight) {
 	}
 }
 
-func extractMixedInsights(insight *ContentInsight) {
+func extractMixedInsights(insight *ContentInsight, files []FileSummary) {
 	insight.Topics = []string{"various files"}
+
+	type fileScore struct {
+		name string
+		size int64
+	}
+	var sorted []fileScore
+	for _, f := range files {
+		sorted = append(sorted, fileScore{f.Name, f.Size})
+	}
+
+	// Sort by size descending
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].size > sorted[j].size
+	})
+
+	// Take top 3
+	limit := min(len(sorted), 3)
+
+	for i := range limit {
+		insight.KeyFiles = append(insight.KeyFiles, sorted[i].name)
+	}
+
 	insight.Recommendations = []string{
-		"This looks like a mixed collection",
-		"Consider organizing by file type or purpose",
 		"Check the largest files first",
+		"Sort by file type to organize",
 	}
 }
 
+// findImportantDocs sorts files based on a scoring system and returns the top K files,
+// or all files if K exceeds the number of files. It includes a fallback mechanism if
+// no relevant documents are found.
 func findImportantDocs(files []FileSummary, limit int) []string {
 	type scoredFile struct {
 		name  string
@@ -438,44 +461,60 @@ func findImportantDocs(files []FileSummary, limit int) []string {
 	}
 
 	for _, file := range files {
-		// only PDFs and DOCX are considered "important docs"
-		if file.Extension != ".pdf" && file.Extension != ".docx" {
+		// Filter: Only look at Documents
+		ext := strings.ToLower(file.Extension)
+		if ext != ".pdf" && ext != ".docx" && ext != ".doc" {
 			continue
 		}
 
 		score := 0
 		name := strings.ToLower(file.Name)
 
-		// keyword scoring
+		// 1. Keyword Scoring
 		if strings.Contains(name, "summary") || strings.Contains(name, "overview") {
 			score += 50
 		}
 		if strings.Contains(name, "final") || strings.Contains(name, "important") {
 			score += 40
 		}
-
-		// year relevance (2 years ago, last year, this year)
-		if strings.Contains(name, years[2]) { // this year
+		if strings.Contains(name, "guide") || strings.Contains(name, "handbook") {
 			score += 30
-		} else if strings.Contains(name, years[1]) { // last year
+		}
+
+		// 2. Year Relevance (Recent = Better)
+		if strings.Contains(name, years[2]) { // Current year
+			score += 30
+		} else if strings.Contains(name, years[1]) { // Last year
 			score += 20
-		} else if strings.Contains(name, years[0]) { // two years ago
+		} else if strings.Contains(name, years[0]) { // 2 years ago
 			score += 10
 		}
 
-		// size weighting (big files could have sime information for us)
-		if file.Size > 1_000_000 { // >1MB
+		// 3. Size Weighting (Larger files often contain the "Core" content)
+		if file.Size > 1_000_000 { // > 1MB
 			score += 10
 		}
 
 		scored = append(scored, scoredFile{name: file.Name, score: score})
 	}
 
+	// SAFETY NET: If no PDF/Docx found at all, try to return ANY large file
+	// This prevents the "Mixed Domain" hallucination if the folder has no PDFs
+	if len(scored) == 0 && len(files) > 0 {
+		// Just grab the largest files regardless of extension
+		for _, file := range files {
+			if file.Size > 500_000 { // > 500KB
+				scored = append(scored, scoredFile{name: file.Name, score: 0})
+			}
+		}
+	}
+
+	// Sort by Score Descending
 	sort.Slice(scored, func(i, j int) bool {
 		return scored[i].score > scored[j].score
 	})
 
-	// extract top K(limit) names
+	// Extract top K results
 	var result []string
 	for i := 0; i < len(scored) && i < limit; i++ {
 		result = append(result, scored[i].name)
@@ -489,6 +528,7 @@ func detectTechStack(files []FileSummary) []string {
 
 	for _, file := range files {
 		name := strings.ToLower(file.Name)
+		ext := strings.ToLower(file.Extension)
 
 		if name == "pubspec.yaml" {
 			stacks["Flutter"] = true
@@ -508,6 +548,15 @@ func detectTechStack(files []FileSummary) []string {
 		if name == "pom.xml" || name == "build.gradle" {
 			stacks["Java"] = true
 		}
+		if name == "cmakelists.txt" || name == "makefile" {
+			stacks["C/C++ (Make/CMake)"] = true
+		}
+		if ext == ".cpp" || ext == ".c" || ext == ".h" || ext == ".hpp" {
+			stacks["C/C++"] = true
+		}
+		if ext == ".cu" {
+			stacks["CUDA (NVIDIA)"] = true
+		}
 	}
 
 	result := []string{}
@@ -517,143 +566,98 @@ func detectTechStack(files []FileSummary) []string {
 	return result
 }
 
-// GeneratePrompt creates an expressive, fun, domain-aware prompt for the LLM
-func GeneratePrompt(insight *ContentInsight, scanResult *scanner.ScanResult) string {
-	var systemPrompt string
+// GeneratePrompt creates the prompt based on your new "Smart Summary" format
+// using the ENRICHED DirectorySummary to access file metadata.
+func GeneratePrompt(insight *ContentInsight, summary *DirectorySummary) string {
 
-	switch insight.Domain {
-	case DomainStudyMaterials:
-		systemPrompt = `You are Scout, a friendly and energetic study buddy 📚✨. 
-This folder contains study or exam prep materials.
+	systemPrompt := `You are Scout, an intelligent directory analyst.
 
-Your job: Help the user quickly grasp what they have, what subjects/topics, and how to approach them effectively. Be fun, encouraging, and expressive.
+### INSTRUCTIONS:
+1. **Analyze** the "stats" and "total_files" for the "This folder contains" section.
+2. **Infer** the "Likely Purpose".
+3. **Select** interesting "Highlights".
+4. **Suggest** actionable next steps.
 
-FORMAT (use exactly this):
-📂 What's here: [One lively sentence summarizing topics and materials]
-🚀 What to do: [One sentence on how to tackle or use them effectively]
-📍 Start here:
-• [filename] - [why start here, in a fun/encouraging tone]
-• [filename] - [what's next and why]
-• [filename] - [and next, catchy suggestion]
+### ⛔ NEGATIVE CONSTRAINTS (CRITICAL):
+- DO NOT output "Step 1", "Step 2", or "Here is the analysis".
+- DO NOT output internal reasoning or chain-of-thought.
+- OUTPUT ONLY the final result starting with the 📁 emoji.
+- DO NOT use Markdown headers (like ## or ###). Use the emojis as headers.
 
-Keep it under 100 words. Use actual filenames, be human, playful, and motivating! 🎯`
+### REQUIRED OUTPUT FORMAT:
 
-	case DomainSoftwareProject:
-		systemPrompt = `You are Scout, a clever, friendly senior engineer 🤓💻. 
-This folder contains a code project.
+📁 This folder contains:
+  - [total_files] files total
 
-Your job: Explain what this project does, its tech stack, key modules, and where to start exploring. Be clear, engaging, and slightly playful, like a good tour guide.
+🎯 Likely Purpose:
+  [Hypothesis based strictly on file previews]
 
-FORMAT (use exactly this):
-📂 What's here: [Tech stack, main purpose, key modules in one sentence]
-🚀 What to do: [What the app/project does, in a concise and lively way]
-📍 Start here:
-• [filename or path] - [what it shows / why important, catchy wording]
-• [filename or path] - [next key module, fun/expressive guidance]
-• [filename or path] - [another important piece]
+🔍 Highlights:
+  - [Content Insight]
+  - [Common Technology Used]
+  - [Key Pattern]
 
-Keep it under 100 words. Use real filenames. Make it readable and friendly! 🚀`
+⚠️ Suggestions:
+  - [Actionable advice]
+  - [Reading recommendation]
 
-	case DomainMedia:
-		systemPrompt = `You are Scout, a super chill, fun media buddy 😎🎵📸. 
-This folder has videos, music, or images.
+### RULES:
+- BE TRUTHFUL.
+- Keep it concise.`
 
-Your job: Be casual, entertaining, and fun. Encourage browsing, enjoyment, and organization in a friendly tone.
-
-FORMAT (use exactly this):
-📂 What's here: [Describe the media, quantity, or type in a fun way]
-🚀 What to do: [Encourage enjoying it, maybe organizing or sharing]
-📍 Start here:
-• Just browse and enjoy! 🎉
-• Maybe organize by date/event if you want
-• Backup somewhere safe
-
-Keep it light, fun, under 75 words! 😁`
-
-	case DomainDocuments:
-		systemPrompt = `You are Scout, a witty, helpful executive assistant 📝✨. 
-This folder has documents.
-
-Your job: Explain what's in these docs, how to navigate, and give a few actionable suggestions. Be clear but make it interesting.
-
-FORMAT (use exactly this):
-📂 What's here: [Types of documents/topics, catchy summary]
-🚀 What to do: [How to use these documents effectively]
-📍 Start here:
-• [filename] - [why start here, witty or fun phrasing]
-• [filename] - [next important doc]
-• [organization tip, short and expressive]
-
-Keep it professional but lively, under 100 words.`
-
-	case DomainFinancial:
-		systemPrompt = `You are Scout, a friendly financial guide 💰📊. 
-This folder contains financial docs.
-
-Your job: Explain the records clearly, suggest order and organization, be concise but lively and helpful.
-
-FORMAT (use exactly this):
-📂 What's here: [Types of financial docs]
-🚀 What to do: [What info is available and why it matters]
-📍 Start here:
-• [filename] - [what it contains, fun phrasing optional]
-• [organization tip]
-• [backup reminder]
-
-Keep it professional but expressive, under 100 words.`
-
-	default:
-		systemPrompt = `You are Scout, a friendly organizer for mixed folders 😃📂. 
-Your job: Summarize what's in this folder, give actionable next steps, and be lively, catchy, and human.
-
-FORMAT (use exactly this):
-📂 What's here: [Brief, expressive summary of contents]
-🚀 What to do: [Practical, fun next steps]
-📍 Start here:
-• [filename or suggestion 1]
-• [filename or suggestion 2]
-• [filename or suggestion 3]
-
-Keep it under 100 words, clear, and engaging!`
-
+	// 2. Prepare the Context (The Ingredients)
+	type KeyFileContext struct {
+		Name     string         `json:"name"`
+		Type     string         `json:"extension"`
+		Size     string         `json:"size_formatted"`
+		Metadata map[string]any `json:"metadata"` // Contains "preview" (code snippets)
 	}
 
-	// Build concise context
+	var keyFilesCtx []KeyFileContext
+
+	// Match insight.KeyFiles (names) to summary.Files (data) to get the Metadata
+	for _, filename := range insight.KeyFiles {
+		for _, f := range summary.Files {
+			if f.Name == filename {
+				keyFilesCtx = append(keyFilesCtx, KeyFileContext{
+					Name:     f.Name,
+					Type:     f.Extension,
+					Size:     formatBytes(f.Size), // Uses helper function below
+					Metadata: f.Metadata,          // <--- Passes code snippets to LLM
+				})
+				break
+			}
+		}
+	}
+
+	// 3. Build the JSON Payload
 	contextData := map[string]any{
-		"domain":      string(insight.Domain),
-		"confidence":  fmt.Sprintf("%.0f%%", insight.Confidence*100),
-		"file_count":  len(scanResult.Files),
-		"categories":  insight.FilesByCategory,
-		"topics":      insight.Topics,
-		"date_range":  insight.DateRange,
-		"key_files":   insight.KeyFiles,
-		"total_files": len(scanResult.Files),
+		"stats":           insight.FilesByCategory,
+		"total_files":     summary.FileCount, // <--- Explicit Total Count to fix Math issue
+		"domain_detected": insight.Domain,
+		"key_files_data":  keyFilesCtx, // Only the top relevant files with content
+		"topics":          insight.Topics,
 	}
-
-	// Only include top key files
-	maxFiles := 5
-	if len(insight.KeyFiles) < maxFiles {
-		maxFiles = len(insight.KeyFiles)
-	}
-	contextData["key_files"] = insight.KeyFiles[:maxFiles]
 
 	contextJSON, _ := json.MarshalIndent(contextData, "", "  ")
 
-	userPrompt := fmt.Sprintf(`Directory data:
-%s
+	userPrompt := fmt.Sprintf("Analyze this Directory Data:\n%s", string(contextJSON))
 
-Instructions:
-- Use the EXACT filenames from key_files
-- Include paths if needed
-- Follow the format exactly
-- Be lively, expressive, fun, and helpful
-- Suggest actionable next steps
-- For software, highlight entry points and key modules
-- For study materials, suggest a study order
-- For documents/financial, highlight importance clearly
-- Use emojis when it enhances clarity or fun`, string(contextJSON))
-
-	// Use Llama 3.2 prompt format
+	// Llama 3 Prompt Format
 	return fmt.Sprintf("<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n%s<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n%s<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
 		systemPrompt, userPrompt)
+}
+
+// Helper to format bytes (Add this at the bottom of analysis.go if not in utils)
+func formatBytes(b int64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "KMGTPE"[exp])
 }
