@@ -597,7 +597,7 @@ func GeneratePrompt(insight *ContentInsight, summary *DirectorySummary) string {
   - [Common Technology Used]
   - [Key Pattern]
 
-⚠️ Suggestions:
+👀 Suggestions:
   - [Actionable advice]
   - [Reading recommendation]
 
