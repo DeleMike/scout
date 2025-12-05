@@ -7,28 +7,42 @@ import (
 	"strings"
 )
 
+// FileType represents the type of file system entry.
 type FileType int
 
 const (
-	File FileType = iota
-	Directory
+	File      FileType = iota // Regular file
+	Directory                 // Directory/folder
 )
 
+// FileInfo contains metadata about a single file.
 type FileInfo struct {
-	Name    string
-	Path    string
-	Type    FileType
-	FileExt string
-	Size    int64
+	Name    string   // Base filename (e.g., "main.go")
+	Path    string   // Full path to file
+	Type    FileType // File or Directory
+	FileExt string   // File extension (e.g., ".go")
+	Size    int64    // Size in bytes
 }
 
+// ScanResult contains the complete scan of a directory.
 type ScanResult struct {
-	Path           string
-	Files          []FileInfo
-	Subdirectories []string
+	Path           string     // Root directory path
+	Files          []FileInfo // All files found
+	Subdirectories []string   // Paths to subdirectories
 }
 
-// ScanDirectory checks what are the contents of the current working directory
+// ScanDirectory recursively walks a directory tree and collects
+// information about all files and subdirectories.
+//
+// Hidden files (starting with '.') are automatically excluded to
+// avoid scanning system files, git directories, etc.
+//
+// Parameters:
+//   - root: Path to directory to scan
+//
+// Returns:
+//   - *ScanResult: Complete directory structure
+//   - error: Any error encountered during scanning
 func ScanDirectory(root string) (*ScanResult, error) {
 	summary := &ScanResult{
 		Path: root,
@@ -36,23 +50,26 @@ func ScanDirectory(root string) (*ScanResult, error) {
 
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return nil // Skip entries that can't be read
 		}
 
 		name := d.Name()
 
+		// skip hidden files
 		if strings.HasPrefix(name, ".") {
 			if d.IsDir() {
-				return filepath.SkipDir
+				return filepath.SkipDir // Don't recurse into hidden dirs
 			}
 			return nil
 		}
 
+		// Track subdirectories (but don't add root itself)
 		if d.IsDir() && path != root {
 			summary.Subdirectories = append(summary.Subdirectories, path)
 			return nil
 		}
 
+		// Add regular files to the result
 		if !d.IsDir() {
 			info, _ := d.Info()
 			fileExt := strings.ToLower(filepath.Ext(name))
@@ -76,6 +93,11 @@ func ScanDirectory(root string) (*ScanResult, error) {
 	return summary, nil
 }
 
+// Pretty formats the scan result as a human-readable string
+// showing files with their extensions and sizes, plus subdirectories.
+//
+// Returns:
+//   - string: Formatted directory listing
 func (d *ScanResult) Pretty() string {
 	var b strings.Builder
 

@@ -9,6 +9,21 @@ import (
 	"github.com/hybridgroup/yzma/pkg/llama"
 )
 
+// Summarize runs local Llama inference to generate natural language
+// insights from the structured prompt.
+//
+// This function:
+//  1. Loads the Llama model from disk
+//  2. Tokenizes the prompt
+//  3. Runs inference with batched decoding
+//  4. Formats output with terminal colors
+//
+// Parameters:
+//   - prompt: Complete Llama-3 formatted prompt (from GeneratePrompt)
+//
+// Returns:
+//   - string: Formatted AI response
+//   - error: Any error during model loading or inference
 func Summarize(prompt string) (string, error) {
 	libPath := os.Getenv("YZMA_LIB")
 	if libPath == "" {
@@ -28,7 +43,6 @@ func Summarize(prompt string) (string, error) {
 	defer llama.ModelFree(model)
 
 	ctxParams := llama.ContextDefaultParams()
-	// 1. INCREASE CONTEXT WINDOW
 	// 22k files need space. 16k tokens is safe for Mac M1/M2/M3.
 	ctxParams.NCtx = 16384
 	ctxParams.NBatch = 4096
@@ -38,7 +52,6 @@ func Summarize(prompt string) (string, error) {
 
 	vocab := llama.ModelGetVocab(model)
 
-	// 2. TOKENIZE FULL PROMPT (No Truncation!)
 	tokens := llama.Tokenize(vocab, prompt, false, false)
 
 	// fmt.Printf("📊 Token Count: %d / %d\n", len(tokens), ctxParams.NCtx)
@@ -47,8 +60,6 @@ func Summarize(prompt string) (string, error) {
 		return "", fmt.Errorf("prompt is too large (%d tokens). Limit is %d", len(tokens), ctxParams.NCtx)
 	}
 
-	// 3. CHUNKED DECODING (Prefill)
-	// This prevents the "GGML_ASSERT" crash and handles long prompts gracefully.
 	batchSize := int(ctxParams.NBatch)
 
 	for i := 0; i < len(tokens); i += batchSize {
@@ -70,7 +81,6 @@ func Summarize(prompt string) (string, error) {
 		}
 	}
 
-	// 4. GENERATION LOOP
 	sampler := llama.SamplerChainInit(llama.SamplerChainDefaultParams())
 	defer llama.SamplerFree(sampler)
 	llama.SamplerChainAdd(sampler, llama.SamplerInitGreedy())
@@ -78,10 +88,8 @@ func Summarize(prompt string) (string, error) {
 	maxTokens := int32(1024)
 	var response strings.Builder
 
-	// Prime the pump with a dummy sample to get started
 	token := llama.SamplerSample(sampler, lctx, -1)
 
-	// We start generating *after* the full prompt has been consumed
 	batch := llama.BatchGetOne([]llama.Token{token})
 
 	// Check if the very first token is useful
@@ -119,7 +127,15 @@ func Summarize(prompt string) (string, error) {
 	return cleanOutput, nil
 }
 
-// FormatForTerminal adds colors based on the Emojis used in the Scout output
+// FormatForTerminal adds ANSI color codes based on emoji headers
+// to make the output more visually appealing in terminals.
+//
+// Color scheme:
+//   - 📂 (folder info): Cyan + Bold
+//   - 🎯 (purpose): Green + Bold
+//   - 🔍 (highlights): Yellow + Bold
+//   - ⚠️/👀 (warnings/suggestions): Red + Bold
+//   - **bold text**: Bold formatting
 func FormatForTerminal(text string) string {
 	const (
 		Reset  = "\033[0m"

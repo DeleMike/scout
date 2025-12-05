@@ -9,10 +9,20 @@ import (
 	"github.com/DeleMike/scout/internal/summarize"
 )
 
-// runBuiltin runs simple commands that every shell application should have.
+// runBuiltin executes built-in shell commands that don't require
+// external processes.
 //
-// It is a typically only runs one command. (e.g, cd, ls, pwd, etc). However, it could be more complex.
-// Basically, it consists of the usual thing you think a typical Unix terminal can run.
+// Supported commands:
+//   - exit: Terminate the shell
+//   - pwd: Print working directory
+//   - ls: List directory contents
+//   - sc: Run Scout directory analysis
+//
+// Parameters:
+//   - args: Command and its arguments (args[0] is the command name)
+//
+// Returns:
+//   - bool: true if command was recognized and handled, false otherwise.
 func (s *Shell) runBuiltin(args []string) bool {
 	switch args[0] {
 	case "exit":
@@ -30,6 +40,8 @@ func (s *Shell) runBuiltin(args []string) bool {
 		return true
 	case "sc":
 		// wd, _ := os.Getwd()
+		// Execute Scout analysis on specified directory
+		// TODO: Make path configurable via args instead of hardcoded
 		summary, insight, err := scout.Run("/Users/mac/OpenSource/Scribe-Data")
 		if err != nil {
 			fmt.Println("Error:", err)

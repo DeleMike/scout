@@ -9,34 +9,40 @@ import (
 	"time"
 )
 
-// Helper functions
-
+// IsCodeFile checks if a file extension represents source code
 func IsCodeFile(ext string) bool {
 	// as far as I can add
 	codeExts := []string{".go", ".dart", ".js", ".ts", ".py", ".java", ".rb", ".rs", ".c", ".cpp", ".cs", ".php", ".swift", ".kt"}
 	return slices.Contains(codeExts, ext)
 }
 
+// IsConfigFile checks if a file is a configuration file
+// based on extension or filename
 func IsConfigFile(ext, name string) bool {
 	return ext == ".json" || ext == ".yaml" || ext == ".yml" || ext == ".toml" ||
 		ext == ".xml" || ext == ".ini" || name == ".env" || name == ".gitignore"
 }
 
+// IsImageFile checks if a file extension represents an image
 func IsImageFile(ext string) bool {
 	return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" ||
 		ext == ".bmp" || ext == ".svg" || ext == ".webp" || ext == ".heic"
 }
 
+// IsVideoFile checks if a file extension represents a video
 func IsVideoFile(ext string) bool {
 	return ext == ".mp4" || ext == ".avi" || ext == ".mov" || ext == ".mkv" ||
 		ext == ".webm" || ext == ".flv" || ext == ".wmv"
 }
 
+// IsAudioFile checks if a file extension represents audio
 func IsAudioFile(ext string) bool {
 	return ext == ".mp3" || ext == ".wav" || ext == ".flac" || ext == ".aac" ||
 		ext == ".ogg" || ext == ".m4a" || ext == ".wma"
 }
 
+// IsProjectMarkerFile checks if a filename indicates a software project
+// (package managers, build files, etc.)
 func IsProjectMarkerFile(name string) bool {
 	markers := []string{"package.json", "pubspec.yaml", "go.mod", "Cargo.toml",
 		"requirements.txt", "pom.xml", "build.gradle", "Gemfile", "composer.json"}
@@ -49,7 +55,9 @@ func IsProjectMarkerFile(name string) bool {
 	return false
 }
 
-
+// ExtractYear finds a 4-digit year (19xx or 20xx) in a filename
+//
+// Returns: Year as string, or empty string if not found
 func ExtractYear(filename string) string {
 	re := regexp.MustCompile(`\b(19|20)\d{2}\b`)
 	matches := re.FindStringSubmatch(filename)
@@ -59,6 +67,12 @@ func ExtractYear(filename string) string {
 	return ""
 }
 
+// ExtractTopicsFromFilename extracts meaningful words from a filename
+// by removing common separators, numbers, and stop words.
+//
+// Example: "final_exam_2024_chapter-5.pdf" → ["final", "exam", "chapter"]
+//
+// Returns: List of topic words (minimum 4 characters, excluding stop words)
 func ExtractTopicsFromFilename(filename string) []string {
 	// Remove extension and split by common separators
 	name := strings.TrimSuffix(filename, filepath.Ext(filename))
@@ -89,6 +103,13 @@ func ExtractTopicsFromFilename(filename string) []string {
 	return topics
 }
 
+// ShouldPrioritizeDoc determines if a document filename suggests importance
+// based on keywords and recency.
+//
+// Priority keywords: summary, overview, final, important, guide, etc.
+// Also prioritizes documents from the last 3 years.
+//
+// Returns: true if the document should be highlighted
 func ShouldPrioritizeDoc(filename string) bool {
 	lowerName := strings.ToLower(filename)
 	currentYear := time.Now().Year()

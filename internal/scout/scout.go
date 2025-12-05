@@ -7,25 +7,38 @@ import (
 	"github.com/DeleMike/scout/internal/scanner"
 )
 
-// FileSummary is the structured info for each file
+// FileSummary represents structured metadata for a single file
 type FileSummary struct {
-	Name      string         `json:"name"`
-	Type      string         `json:"type"`
-	Extension string         `json:"extension"`
-	Size      int64          `json:"size_bytes"`
-	Metadata  map[string]any `json:"metadata,omitempty"`
+	Name      string         `json:"name"`               // Filename
+	Type      string         `json:"type"`               // Category (code, document, etc.)
+	Extension string         `json:"extension"`          // File extension
+	Size      int64          `json:"size_bytes"`         // Size in bytes
+	Metadata  map[string]any `json:"metadata,omitempty"` // Extracted content details
 }
 
-// DirectorySummary is the structured summary of a directory
+// DirectorySummary is the complete analysis result for a directory
 type DirectorySummary struct {
-	Directory      string        `json:"directory"`
-	FileCount      int           `json:"file_count"`
-	Subdirectories []string      `json:"subdirectories"`
-	Files          []FileSummary `json:"files"`
+	Directory      string        `json:"directory"`      // Root path
+	FileCount      int           `json:"file_count"`     // Total files
+	Subdirectories []string      `json:"subdirectories"` // Subdirectory paths
+	Files          []FileSummary `json:"files"`          // List of files in Directory
 }
 
-// Run scans a directory, extracts content metadata, and returns structured summary
+// Run is the main entry point for directory analysis.
+// It orchestrates the entire pipeline:
+//  1. Scan directory structure
+//  2. Extract content from each file
+//  3. Analyze patterns and generate insights
+//
+// Parameters:
+//   - root: Path to directory to analyze
+//
+// Returns:
+//   - *DirectorySummary: Structured file metadata
+//   - *ContentInsight: AI-ready analysis and recommendations
+//   - error: Any error encountered during processing
 func Run(root string) (*DirectorySummary, *ContentInsight, error) {
+	// Scan directory structure
 	dir, err := scanner.ScanDirectory(root)
 	if err != nil {
 		return nil, nil, err
@@ -42,6 +55,7 @@ func Run(root string) (*DirectorySummary, *ContentInsight, error) {
 			continue
 		}
 
+		// Get appropriate extractor for this file type
 		extractor := extractor.DetectCategory(file.FileExt)
 		content, err := extractor.Extract(file.Path)
 
@@ -66,8 +80,10 @@ func Run(root string) (*DirectorySummary, *ContentInsight, error) {
 		summary.Files = append(summary.Files, fileSummary)
 
 	}
+
+	// Analyze directory to generate insights
 	insight := AnalyzeDirectory(summary)
-	
+
 	return summary, insight, nil
 
 }

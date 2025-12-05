@@ -11,31 +11,40 @@ import (
 	"github.com/DeleMike/scout/internal/utils"
 )
 
-// DomainType represents the detected purpose of a directory
+// DomainType represents the detected purpose/category of a directory
 type DomainType string
 
 // during analysis, we try to group the different preview/details into groups for better insights on what scout is looking at
 const (
-	DomainSoftwareProject DomainType = "software"
-	DomainDocuments       DomainType = "documents"
-	DomainMedia           DomainType = "media"
-	DomainStudyMaterials  DomainType = "study"
-	DomainFinancial       DomainType = "financial"
-	DomainCreative        DomainType = "creative"
-	DomainMixed           DomainType = "mixed"
-	DomainEmpty           DomainType = "empty"
+	DomainSoftwareProject DomainType = "software"  // Code projects
+	DomainDocuments       DomainType = "documents" // General documents
+	DomainMedia           DomainType = "media"     // Photos, videos, audio
+	DomainStudyMaterials  DomainType = "study"     // Educational content
+	DomainFinancial       DomainType = "financial" // Financial records
+	DomainCreative        DomainType = "creative"  // Design assets
+	DomainMixed           DomainType = "mixed"     // No clear category
+	DomainEmpty           DomainType = "empty"     // No files
 )
 
+// ContentInsight contains intelligent analysis of a directory's contents
 type ContentInsight struct {
-	Domain          DomainType
-	Topics          []string       // Main theme
-	DateRange       string         // for time-sensitive content
-	KeyFiles        []string       // most important files(presumably)
-	FilesByCategory map[string]int // domain type of files in directory
-	Recommendations []string       // our guess
-	Confidence      float64        // confidence of our guess
+	Domain          DomainType     // Primary category detected
+	Topics          []string       // Key themes/technologies found
+	DateRange       string         // Time span of content (if applicable)
+	KeyFiles        []string       // Most important files to look at
+	FilesByCategory map[string]int // Distribution of file types
+	Recommendations []string       // Suggested actions for user
+	Confidence      float64        // How confident we are (0.0-1.0)
 }
 
+// AnalyzeDirectory performs intelligent analysis on directory contents
+// to determine its purpose, key files, and generate recommendations.
+//
+// Parameters:
+//   - summary: Complete directory scan with file metadata
+//
+// Returns:
+//   - *ContentInsight: Analysis results ready for AI summarization
 func AnalyzeDirectory(summary *DirectorySummary) *ContentInsight {
 	insight := &ContentInsight{
 		Topics:          []string{},
@@ -70,6 +79,14 @@ func AnalyzeDirectory(summary *DirectorySummary) *ContentInsight {
 	return insight
 }
 
+// categorizeFiles groups files into broad categories for analysis
+//
+// Categories:
+//   - code, config: Software development files
+//   - pdf, word, text, spreadsheet, presentation: Documents
+//   - image, video, audio: Media files
+//   - archive: Compressed files
+//   - other: Everything else
 func categorizeFiles(files []FileSummary) map[string]int {
 	categories := make(map[string]int)
 
@@ -116,6 +133,15 @@ func categorizeFiles(files []FileSummary) map[string]int {
 
 }
 
+// detectDomain uses heuristics to determine the primary purpose of a directory
+//
+// Detection logic:
+//  1. Check for project marker files (package.json, go.mod, etc.)
+//  2. Calculate percentage distribution of file types
+//  3. Look for domain-specific keywords in filenames
+//  4. Apply domain detection rules in priority order
+//
+// Returns the most likely DomainType for the directory
 func detectDomain(categories map[string]int, files []FileSummary) DomainType {
 	total := 0
 	for _, count := range categories {
@@ -174,7 +200,12 @@ func detectDomain(categories map[string]int, files []FileSummary) DomainType {
 
 }
 
-// calculateConfidence measures how dominant the most frequent category is relative to all categories.
+// calculateConfidence measures how dominant the primary category is
+//
+// Confidence = (largest category count) / (total files)
+// Higher values indicate a more focused directory
+//
+// Returns: Confidence score between 0.0 and 1.0
 func calculateConfidence(categories map[string]int) float64 {
 	total := 0
 	dominant := 0
@@ -193,6 +224,9 @@ func calculateConfidence(categories map[string]int) float64 {
 	return float64(dominant) / float64(total)
 }
 
+// hasStudyKeywords checks if filenames contain educational terms
+//
+// Requires at least 3 files with study-related keywords to return true
 func hasStudyKeywords(files []FileSummary) bool {
 	keywords := []string{"exam", "test", "quiz", "study", "lecture", "notes", "chapter",
 		"assignment", "homework", "course", "syllabus", "practice", "review"}
@@ -210,6 +244,9 @@ func hasStudyKeywords(files []FileSummary) bool {
 	return matchCount >= 3
 }
 
+// hasFinancialKeywords checks if filenames contain financial terms
+//
+// Requires at least 2 files with financial keywords to return true
 func hasFinancialKeywords(files []FileSummary) bool {
 	keywords := []string{"tax", "invoice", "receipt", "statement", "bank", "payroll",
 		"expense", "budget", "financial", "accounting"}
@@ -227,6 +264,9 @@ func hasFinancialKeywords(files []FileSummary) bool {
 	return matchCount >= 2
 }
 
+// hasCreativeKeywords checks if filenames contain design/creative terms
+//
+// Requires at least 2 files with creative keywords to return true
 func hasCreativeKeywords(files []FileSummary) bool {
 	keywords := []string{"design", "mockup", "draft", "sketch", "artwork", "render",
 		"illustration", "logo", "banner", "poster"}
@@ -244,7 +284,8 @@ func hasCreativeKeywords(files []FileSummary) bool {
 	return matchCount >= 2
 }
 
-// Domain-specific insight extraction
+// extractDocumentInsights analyzes document-heavy directories
+// Extracts topics from filenames, date ranges, and priority files
 func extractDocumentInsights(insight *ContentInsight, files []FileSummary) {
 	// Analyze PDF filenames for topics and dates
 	topics := make(map[string]int)
@@ -308,6 +349,8 @@ func extractDocumentInsights(insight *ContentInsight, files []FileSummary) {
 	}
 }
 
+// extractSoftwareInsights analyzes software project directories
+// Detects tech stack, finds entry points, and locates README
 func extractSoftwareInsights(insight *ContentInsight, files []FileSummary) {
 	// Detect tech stack
 	stacks := detectTechStack(files)
@@ -342,6 +385,7 @@ func extractSoftwareInsights(insight *ContentInsight, files []FileSummary) {
 	}
 }
 
+// extractMediaInsights analyzes media file directories
 func extractMediaInsights(insight *ContentInsight, files []FileSummary) {
 	imageCount := 0
 	videoCount := 0
@@ -370,6 +414,7 @@ func extractMediaInsights(insight *ContentInsight, files []FileSummary) {
 	}
 }
 
+// extractFinancialInsights analyzes financial document directories
 func extractFinancialInsights(insight *ContentInsight, files []FileSummary) {
 	topics := make(map[string]bool)
 
@@ -403,6 +448,7 @@ func extractFinancialInsights(insight *ContentInsight, files []FileSummary) {
 	}
 }
 
+// extractCreativeInsights provides generic insights for creative work
 func extractCreativeInsights(insight *ContentInsight) {
 	insight.Topics = []string{"creative work", "design assets"}
 	insight.Recommendations = []string{
@@ -412,6 +458,8 @@ func extractCreativeInsights(insight *ContentInsight) {
 	}
 }
 
+// extractMixedInsights handles directories with no clear category
+// Falls back to highlighting the largest files
 func extractMixedInsights(insight *ContentInsight, files []FileSummary) {
 	insight.Topics = []string{"various files"}
 
@@ -442,9 +490,18 @@ func extractMixedInsights(insight *ContentInsight, files []FileSummary) {
 	}
 }
 
-// findImportantDocs sorts files based on a scoring system and returns the top K files,
-// or all files if K exceeds the number of files. It includes a fallback mechanism if
-// no relevant documents are found.
+// findImportantDocs uses a scoring system to identify priority documents
+//
+// Scoring criteria:
+//   - Filename keywords: summary (+50), final (+40), guide (+30)
+//   - Recency: current year (+30), last year (+20), 2 years ago (+10)
+//   - Size: files > 1MB get +10 points
+//
+// Parameters:
+//   - files: All files to consider
+//   - limit: Maximum number of files to return
+//
+// Returns: Top scored filenames
 func findImportantDocs(files []FileSummary, limit int) []string {
 	type scoredFile struct {
 		name  string
@@ -470,7 +527,6 @@ func findImportantDocs(files []FileSummary, limit int) []string {
 		score := 0
 		name := strings.ToLower(file.Name)
 
-		// 1. Keyword Scoring
 		if strings.Contains(name, "summary") || strings.Contains(name, "overview") {
 			score += 50
 		}
@@ -481,7 +537,6 @@ func findImportantDocs(files []FileSummary, limit int) []string {
 			score += 30
 		}
 
-		// 2. Year Relevance (Recent = Better)
 		if strings.Contains(name, years[2]) { // Current year
 			score += 30
 		} else if strings.Contains(name, years[1]) { // Last year
@@ -490,7 +545,6 @@ func findImportantDocs(files []FileSummary, limit int) []string {
 			score += 10
 		}
 
-		// 3. Size Weighting (Larger files often contain the "Core" content)
 		if file.Size > 1_000_000 { // > 1MB
 			score += 10
 		}
@@ -498,8 +552,8 @@ func findImportantDocs(files []FileSummary, limit int) []string {
 		scored = append(scored, scoredFile{name: file.Name, score: score})
 	}
 
-	// SAFETY NET: If no PDF/Docx found at all, try to return ANY large file
-	// This prevents the "Mixed Domain" hallucination if the folder has no PDFs
+	// If no PDF/Docx found at all, try to return ANY large file
+	// This prevents the "Mixed Domain" hallucination I experienced when the folder has no PDFs
 	if len(scored) == 0 && len(files) > 0 {
 		// Just grab the largest files regardless of extension
 		for _, file := range files {
@@ -523,6 +577,9 @@ func findImportantDocs(files []FileSummary, limit int) []string {
 	return result
 }
 
+// detectTechStack identifies technologies by looking for marker files
+//
+// Returns: List of detected technology names
 func detectTechStack(files []FileSummary) []string {
 	stacks := make(map[string]bool)
 
@@ -566,8 +623,15 @@ func detectTechStack(files []FileSummary) []string {
 	return result
 }
 
-// GeneratePrompt creates the prompt based on your new "Smart Summary" format
-// using the ENRICHED DirectorySummary to access file metadata.
+// GeneratePrompt creates a Llama-3 formatted prompt for AI analysis
+//
+// The prompt includes:
+//   - System instructions defining Scout's role and output format
+//   - Context data with file statistics and metadata
+//   - Strict formatting constraints to ensure clean output
+//
+// Returns: Complete prompt ready for Llama inference
+
 func GeneratePrompt(insight *ContentInsight, summary *DirectorySummary) string {
 
 	systemPrompt := `You are Scout, an intelligent directory analyst.
@@ -605,12 +669,11 @@ func GeneratePrompt(insight *ContentInsight, summary *DirectorySummary) string {
 - BE TRUTHFUL.
 - Keep it concise.`
 
-	// 2. Prepare the Context (The Ingredients)
 	type KeyFileContext struct {
 		Name     string         `json:"name"`
 		Type     string         `json:"extension"`
 		Size     string         `json:"size_formatted"`
-		Metadata map[string]any `json:"metadata"` // Contains "preview" (code snippets)
+		Metadata map[string]any `json:"metadata"` // metadata contains things like preview, details of file, basicall check [ExtractedContent]
 	}
 
 	var keyFilesCtx []KeyFileContext
@@ -622,18 +685,17 @@ func GeneratePrompt(insight *ContentInsight, summary *DirectorySummary) string {
 				keyFilesCtx = append(keyFilesCtx, KeyFileContext{
 					Name:     f.Name,
 					Type:     f.Extension,
-					Size:     formatBytes(f.Size), // Uses helper function below
-					Metadata: f.Metadata,          // <--- Passes code snippets to LLM
+					Size:     formatBytes(f.Size),
+					Metadata: f.Metadata,
 				})
 				break
 			}
 		}
 	}
 
-	// 3. Build the JSON Payload
 	contextData := map[string]any{
 		"stats":           insight.FilesByCategory,
-		"total_files":     summary.FileCount, // <--- Explicit Total Count to fix Math issue
+		"total_files":     summary.FileCount,
 		"domain_detected": insight.Domain,
 		"key_files_data":  keyFilesCtx, // Only the top relevant files with content
 		"topics":          insight.Topics,
@@ -648,7 +710,7 @@ func GeneratePrompt(insight *ContentInsight, summary *DirectorySummary) string {
 		systemPrompt, userPrompt)
 }
 
-// Helper to format bytes (Add this at the bottom of analysis.go if not in utils)
+// formatBytes converts byte count to human-readable format (KB, MB, GB, etc.)
 func formatBytes(b int64) string {
 	const unit = 1024
 	if b < unit {
