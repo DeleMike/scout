@@ -631,7 +631,6 @@ func detectTechStack(files []FileSummary) []string {
 //   - Strict formatting constraints to ensure clean output
 //
 // Returns: Complete prompt ready for Llama inference
-
 func GeneratePrompt(insight *ContentInsight, summary *DirectorySummary) string {
 
 	systemPrompt := `You are Scout, an intelligent directory analyst.

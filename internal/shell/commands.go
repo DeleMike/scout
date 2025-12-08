@@ -3,6 +3,7 @@ package shell
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/DeleMike/scout/internal/scout"
@@ -39,10 +40,26 @@ func (s *Shell) runBuiltin(args []string) bool {
 		}
 		return true
 	case "sc":
-		// wd, _ := os.Getwd()
-		// Execute Scout analysis on specified directory
-		// TODO: Make path configurable via args instead of hardcoded
-		summary, insight, err := scout.Run("/Users/mac/OpenSource/Scribe-Data")
+		rawPath := "."
+		if len(args) > 1 {
+			rawPath = strings.Trim(args[1], "\"'")
+		}
+
+		// This turns "." into "/Users/mac/OpenSource/Scribe-Data"
+		targetDir, err := filepath.Abs(rawPath)
+		if err != nil {
+			fmt.Printf("❌ Error resolving path: %v\n", err)
+			return true
+		}
+
+		if _, err := os.Stat(targetDir); os.IsNotExist(err) {
+			fmt.Printf("❌ Error: Directory '%s' does not exist.\n", targetDir)
+			return true
+		}
+
+		fmt.Printf("🔎 Scouting: %s\n", targetDir)
+
+		summary, insight, err := scout.Run(targetDir)
 		if err != nil {
 			fmt.Println("Error:", err)
 			return true

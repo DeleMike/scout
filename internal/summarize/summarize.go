@@ -30,7 +30,7 @@ func Summarize(prompt string) (string, error) {
 		return "", fmt.Errorf("YZMA_LIB environment variable not set")
 	}
 
-	modelPath := "/Users/mac/Downloads/llama-3.2-3b-instruct-q4_k_m.gguf"
+	modelPath := ".scout/model/llama-3.2-3b-instruct-q4_k_m.gguf"
 	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
 		return "", fmt.Errorf("model file not found at %s", modelPath)
 	}
