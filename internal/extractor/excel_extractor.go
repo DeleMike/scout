@@ -6,8 +6,10 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
+// ExcelExtractor extracts excel file contents
 type ExcelExtractor struct{}
 
+// Extract extracts content from an excel file or CSV
 func (e ExcelExtractor) Extract(path string) (*ExtractedContent, error) {
 	f, err := excelize.OpenFile(path)
 	if err != nil {

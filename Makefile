@@ -51,5 +51,10 @@ run: build
 	@echo "$(GREEN)🚀 Launching $(APP_NAME)...$(RESET)"
 	@$(WRAPPER_BINARY)
 
+# Run revive linter (requires revive.toml config)
+lint:
+	@echo "$(GREEN)Linting code with Revive...$(RESET)"
+	@revive -config revive.toml ./... || echo "$(RED)Linting failed!$(RESET)"
+
 clean:
 	@rm -rf bin tmp

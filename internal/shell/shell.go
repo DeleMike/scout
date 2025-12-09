@@ -1,4 +1,4 @@
-// shell package
+// Package shell is the entry of the Shell design
 package shell
 
 import (

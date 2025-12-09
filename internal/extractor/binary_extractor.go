@@ -2,8 +2,10 @@ package extractor
 
 import "os"
 
+// BinaryExtractor extracts contents from a word document
 type BinaryExtractor struct{}
 
+// Extract tried to extract a binary content
 func (b BinaryExtractor) Extract(path string) (*ExtractedContent, error) {
 	info, err := os.Stat(path)
 	if err != nil {

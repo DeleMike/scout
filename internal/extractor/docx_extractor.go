@@ -6,8 +6,10 @@ import (
 	"strings"
 )
 
+// DocxExtractor extracts contents from a word document
 type DocxExtractor struct{}
 
+// Extract word document content
 func (e DocxExtractor) Extract(path string) (*ExtractedContent, error) {
 	r, err := zip.OpenReader(path)
 	if err != nil {

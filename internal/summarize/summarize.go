@@ -1,3 +1,4 @@
+// Package summarize contains the AI and C libs needed to provide a summary for a project
 package summarize
 
 import (
@@ -24,7 +25,7 @@ import (
 // Returns:
 //   - string: Formatted AI response
 //   - error: Any error during model loading or inference
-func Summarize(prompt string) (string, error) {
+func Summarize(prompt string, enableColor bool) (string, error) {
 	libPath := os.Getenv("YZMA_LIB")
 	if libPath == "" {
 		return "", fmt.Errorf("YZMA_LIB environment variable not set")
@@ -121,10 +122,12 @@ func Summarize(prompt string) (string, error) {
 		batch = llama.BatchGetOne([]llama.Token{token})
 	}
 
-	rawOutput := strings.TrimSpace(response.String())
-	cleanOutput := FormatForTerminal(rawOutput)
+	output := strings.TrimSpace(response.String())
+	if enableColor {
+		return FormatForTerminal(output), nil
+	}
 
-	return cleanOutput, nil
+	return output, nil
 }
 
 // FormatForTerminal adds ANSI color codes based on emoji headers

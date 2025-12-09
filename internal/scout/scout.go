@@ -1,3 +1,4 @@
+// Package scout defines the method that extracts insight and directory summary from a project
 package scout
 
 import (

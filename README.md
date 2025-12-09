@@ -160,21 +160,30 @@ Launch Scout to enter the shell:
 ```
 Commands:  
 ```bash
-scout> ls
-scout> pwd
-
-# Analyze current directory
-scout> sc
-
-# Analyze specific folder
-scout> sc ../documents
+scout> ls                 # List files
+scout> cd ../legacy-code  # Navigate directories
+scout> scout                 # Analyze the current folder
+scout> sc ./frontend      # Analyze a specific subfolder
 ```
 
-### Direct Analysis
-Run without shell:  
+### Quick Scan (Headless Mode)
+Run Scout directly from your terminal to scan a folder and exit immediately. Perfect for quick checks.
 ```bash
-./bin/scout .
-./bin/scout /path/to/folder
+# Scan current directory
+scout .
+sc "."
+
+# Scan a specific path
+sc /Users/dev/projects/My-Go-Project
+scout "/Users/dev/projects/My-Go-Project"
+```
+
+### Saving Reports (Export to File)
+Need to share the analysis? Pipe the output to a text file
+```bash
+scout . >> analysis_report.txt
+
+sc "/Users/dev/projects/My-Go-Project" >> report.txt
 ```
 
 ---
@@ -182,26 +191,29 @@ Run without shell:
 ## 🧪 Example Output
 
 ```text
-✅ Found 33 files (64% confidence: Software domain)
+🔎 Scouting: /Users/mac/projects/My-Go-Project
+✅ Found 42 files (88% confidence: Software Domain)
 🤖 Generating AI insights...
 
-============================================================
+================================================================================
 📁 This folder contains:
   - 18 Go source files
-  - 2 configuration files
-  - 33 files total
+  - 5 YAML configuration files
+  - 42 files total
 
 🎯 Likely Purpose:
-  A Go-based backend service designed for processing job applications.
+  A high-throughput logging service written in Go, designed to ingest and 
+  store event data efficiently.
 
 🔍 Highlights:
-  - main.go sets up an HTTP API on port 8080
-  - README provides instructions for generating cover letters automatically
+  - Common Technology: Go (Backend), SQLite (Storage), Docker (Deployment)
+  - Key Pattern: Uses a worker-pool pattern for concurrent log processing.
+  - Content Insight: "main.go" initializes a TCP server on port 9000.
 
-📍 Recommended Starting Points:
-  - README.md
-  - main.go
-============================================================
+👀 Suggestions:
+  - Start by reading "internal/ingest/worker.go" to understand the concurrency model.
+  - Check "docker-compose.yml" to see how the database is orchestrated.
+================================================================================
 ```
 
 ---

@@ -1,3 +1,4 @@
+// main.go
 package main
 
 import "github.com/DeleMike/scout/internal/shell"

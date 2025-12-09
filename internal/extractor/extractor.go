@@ -1,4 +1,4 @@
-// extractor is used to mine valuable information from a directory and its contents
+// Package extractor is used to mine valuable information from a directory and its contents
 package extractor
 
 // ExtractedContent represents metadata extracted from a file.

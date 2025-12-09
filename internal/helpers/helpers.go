@@ -1,4 +1,5 @@
-package utils
+// Package helpers contains various helpful functions
+package helpers
 
 import (
 	"path/filepath"

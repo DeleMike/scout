@@ -6,8 +6,10 @@ import (
 	"github.com/ledongthuc/pdf"
 )
 
+// PDFExtractor extracts content from a pdf file
 type PDFExtractor struct{}
 
+// Extract extracts content from a pdf file
 func (e PDFExtractor) Extract(path string) (*ExtractedContent, error) {
 	f, r, err := pdf.Open(path)
 	if err != nil {

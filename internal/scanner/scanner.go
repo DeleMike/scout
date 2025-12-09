@@ -1,3 +1,4 @@
+// Package scanner is used to read a directory to know what its contents entail
 package scanner
 
 import (
@@ -11,8 +12,10 @@ import (
 type FileType int
 
 const (
-	File      FileType = iota // Regular file
-	Directory                 // Directory/folder
+	// File is a Regular file
+	File FileType = iota
+	// Directory is a Directory/folder
+	Directory
 )
 
 // FileInfo contains metadata about a single file.

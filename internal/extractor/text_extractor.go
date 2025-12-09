@@ -21,9 +21,10 @@ func IsTextFile(ext string) bool {
 
 	return slices.Contains(textExt, ext)
 }
-
+// GenericTextExtractor is for files that could not be determined and are text like
 type GenericTextExtractor struct{}
 
+// Extract tries to extract content from file at specified path
 func (e GenericTextExtractor) Extract(path string) (*ExtractedContent, error) {
 	file, err := os.Open(path)
 	if err != nil {

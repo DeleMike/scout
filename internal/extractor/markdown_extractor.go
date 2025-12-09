@@ -5,8 +5,10 @@ import (
 	"strings"
 )
 
+// MarkdownExtractor extracts markdown files content
 type MarkdownExtractor struct{}
 
+// Extract extracts content from a markdown file
 func (m MarkdownExtractor) Extract(path string) (*ExtractedContent, error) {
 
 	data, err := os.ReadFile(path)

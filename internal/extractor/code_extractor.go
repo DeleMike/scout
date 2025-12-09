@@ -5,8 +5,10 @@ import (
 	"strings"
 )
 
+// CodeExtractor extracts contents from a code file
 type CodeExtractor struct{}
 
+// Extract extracts content from a code file
 func (c CodeExtractor) Extract(path string) (*ExtractedContent, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
