@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/DeleMike/scout/internal/utils"
+	"github.com/DeleMike/scout/internal/helpers"
 )
 
 // DomainType represents the detected purpose/category of a directory
@@ -96,9 +96,9 @@ func categorizeFiles(files []FileSummary) map[string]int {
 
 		switch {
 		// software
-		case utils.IsCodeFile(ext):
+		case helpers.IsCodeFile(ext):
 			categories["code"]++
-		case utils.IsConfigFile(ext, name):
+		case helpers.IsConfigFile(ext, name):
 			categories["config"]++
 			// Documents
 		case ext == ".pdf":
@@ -113,11 +113,11 @@ func categorizeFiles(files []FileSummary) map[string]int {
 			categories["text"]++
 
 		// Media
-		case utils.IsImageFile(ext):
+		case helpers.IsImageFile(ext):
 			categories["image"]++
-		case utils.IsVideoFile(ext):
+		case helpers.IsVideoFile(ext):
 			categories["video"]++
-		case utils.IsAudioFile(ext):
+		case helpers.IsAudioFile(ext):
 			categories["audio"]++
 
 		// Archives
@@ -161,7 +161,7 @@ func detectDomain(categories map[string]int, files []FileSummary) DomainType {
 	// Check for software project markers (mostly a strong indication that the directory is a software)
 	hasProjectMarkers := false
 	for _, file := range files {
-		if utils.IsProjectMarkerFile(file.Name) {
+		if helpers.IsProjectMarkerFile(file.Name) {
 			hasProjectMarkers = true
 			break
 		}
@@ -295,18 +295,18 @@ func extractDocumentInsights(insight *ContentInsight, files []FileSummary) {
 		if file.Extension == ".pdf" || file.Extension == ".docx" {
 
 			// extract year if present
-			if year := utils.ExtractYear(file.Name); year != "" {
+			if year := helpers.ExtractYear(file.Name); year != "" {
 				years[year] = true
 			}
 
 			// extract potential topics from filename
-			fileTopics := utils.ExtractTopicsFromFilename(file.Name)
+			fileTopics := helpers.ExtractTopicsFromFilename(file.Name)
 			for _, topic := range fileTopics {
 				topics[topic]++
 			}
 
 			// Prioritize files for key files list
-			if utils.ShouldPrioritizeDoc(file.Name) {
+			if helpers.ShouldPrioritizeDoc(file.Name) {
 				insight.KeyFiles = append(insight.KeyFiles, file.Name)
 			}
 
@@ -393,11 +393,11 @@ func extractMediaInsights(insight *ContentInsight, files []FileSummary) {
 
 	for _, file := range files {
 		ext := strings.ToLower(file.Extension)
-		if utils.IsImageFile(ext) {
+		if helpers.IsImageFile(ext) {
 			imageCount++
-		} else if utils.IsVideoFile(ext) {
+		} else if helpers.IsVideoFile(ext) {
 			videoCount++
-		} else if utils.IsAudioFile(ext) {
+		} else if helpers.IsAudioFile(ext) {
 			audioCount++
 		}
 	}
