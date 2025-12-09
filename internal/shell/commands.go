@@ -36,6 +36,9 @@ func (s *Shell) runBuiltin(args []string) bool {
 	case "ls":
 		entries, _ := os.ReadDir(".")
 		for _, ent := range entries {
+			if strings.HasPrefix(ent.Name(), ".") {
+				continue
+			}
 			fmt.Println(ent.Name())
 		}
 		return true
@@ -45,7 +48,6 @@ func (s *Shell) runBuiltin(args []string) bool {
 			rawPath = strings.Trim(args[1], "\"'")
 		}
 
-		// This turns "." into "/Users/mac/OpenSource/Scribe-Data"
 		targetDir, err := filepath.Abs(rawPath)
 		if err != nil {
 			fmt.Printf("❌ Error resolving path: %v\n", err)
@@ -70,29 +72,6 @@ func (s *Shell) runBuiltin(args []string) bool {
 			insight.Confidence*100,
 			insight.Domain)
 
-		// prettyJSON, err := json.MarshalIndent(summary, "", "  ")
-		// if err != nil {
-		// 	fmt.Println("JSON marshal error:", err)
-		// 	return true
-		// }
-		//
-		// fmt.Printf("scanning result: \n%v", string(prettyJSON))
-
-		// scanResult := &scanner.ScanResult{
-		// 	Path:           summary.Directory,
-		// 	Subdirectories: summary.Subdirectories,
-		// 	Files:          make([]scanner.FileInfo, len(summary.Files)),
-		// }
-
-		// for i, file := range summary.Files {
-		// 	scanResult.Files[i] = scanner.FileInfo{
-		// 		Name:    file.Name,
-		// 		FileExt: file.Extension,
-		// 		Size:    file.Size,
-		// 		Type:    scanner.File,
-		// 	}
-		// }
-
 		fmt.Println("🤖 Generating AI insights...")
 		fullPrompt := scout.GeneratePrompt(insight, summary)
 
@@ -102,9 +81,9 @@ func (s *Shell) runBuiltin(args []string) bool {
 			return true
 		}
 
-		fmt.Println("\n" + strings.Repeat("=", 60))
+		fmt.Println("\n" + strings.Repeat("=", 120))
 		fmt.Println(aiResponse)
-		fmt.Println(strings.Repeat("=", 60))
+		fmt.Println(strings.Repeat("=", 120))
 		return true
 
 	}
