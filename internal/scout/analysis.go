@@ -651,6 +651,8 @@ func GeneratePrompt(insight *ContentInsight, summary *DirectorySummary) string {
 
 📁 This folder contains:
   - [total_files] files total
+  - [total_files_by_category]
+  - [num_of_codes_by_type; for example, xx Go files, yy Python files]
 
 🎯 Likely Purpose:
   [Hypothesis based strictly on file previews]
@@ -659,6 +661,7 @@ func GeneratePrompt(insight *ContentInsight, summary *DirectorySummary) string {
   - [Content Insight]
   - [Common Technology Used]
   - [Key Pattern]
+  - [Pattern recognised from other files]
 
 👀 Suggestions:
   - [Actionable advice]
