@@ -21,6 +21,7 @@ func IsTextFile(ext string) bool {
 
 	return slices.Contains(textExt, ext)
 }
+
 // GenericTextExtractor is for files that could not be determined and are text like
 type GenericTextExtractor struct{}
 
