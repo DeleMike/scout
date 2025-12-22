@@ -100,7 +100,7 @@ func Summarize(prompt string, enableColor bool) (string, error) {
 		response.WriteString(string(buf[:length]))
 	}
 
-	for pos := int32(0); pos < maxTokens; pos++ {
+	for range maxTokens {
 		if llama.Decode(lctx, batch) != 0 {
 			break
 		}
